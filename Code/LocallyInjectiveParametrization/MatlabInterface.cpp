@@ -199,20 +199,60 @@ MatlabInterface::CreateComplexMatrix(unsigned int m, unsigned int n, const std::
 {
     mxArray *M = mxCreateDoubleMatrix(m, n, mxCOMPLEX);
     if (vals != NULL) {
-        double *pMr = mxGetPr(M);
-        double *pMi = mxGetPi(M);
+        /*double *pMr = mxGetPr(M);
+        double *pMi = mxGetPi(M);*/
+		//
+		mxComplexDouble *pMc = mxGetComplexDoubles(M);
+		//
         // note that matlab expects the data in column-major order
         for (unsigned int j = 0; j < n; ++j)
             for (unsigned int i = 0; i < m; ++i)
             {
                 unsigned int idxM = j*m+i;
                 unsigned int idx = colmaj ? idxM : i*n+j;
-                pMr[idxM] = double(vals[idx].real());
-                pMi[idxM] = double(vals[idx].imag());
+                /*pMr[idxM] = double(vals[idx].real());
+                pMi[idxM] = double(vals[idx].imag());*/
+				//
+				pMc[idxM].real = double(vals[idx].real());
+				pMc[idxM].imag = double(vals[idx].imag());
+				//
             }
     }
     return M;
 }
+
+//template <typename T>
+//mxArray*
+//MatlabInterface::CreateComplexMatrix(unsigned int m, unsigned int n, const std::complex<T> *vals, bool colmaj)
+//{
+//	mxComplexDouble *pMc = NULL;
+//	//mxComplexDouble *pMc;
+//	
+//	if (vals != NULL) {
+//		pMc = (mxComplexDouble*)mxMalloc(m * n * sizeof(mxComplexDouble));
+//		for (unsigned int j = 0; j < n; ++j) {
+//			for (unsigned int i = 0; i < m; ++i) {
+//				unsigned int idxM = j*m + i;
+//				unsigned int idx = colmaj ? idxM : i*n + j;
+//				pMc[idxM].real = double(vals[idx].real());
+//				pMc[idxM].imag = double(vals[idx].imag());
+//			}
+//		}
+//	}
+//
+//	mxArray *M = NULL;
+//	if (pMc != NULL) {
+//		M = mxCreateDoubleMatrix(0, 0, mxCOMPLEX);
+//		mxSetComplexDoubles(M, pMc);
+//		mxSetM(M, m);
+//		mxSetN(M, n);
+//	}
+//	else {
+//		M = mxCreateDoubleMatrix(m, n, mxCOMPLEX);
+//	}
+//	
+//	return M;
+//}
 
 
 
@@ -248,15 +288,24 @@ MatlabInterface::CreateEncodedSparseComplexMatrix(unsigned int n,
     if (vals != NULL) {
         assert(rowind != NULL);
         assert(colind != NULL);
-        double *pMr = mxGetPr(M);
-        double *pMi = mxGetPi(M);
+        /*double *pMr = mxGetPr(M);
+        double *pMi = mxGetPi(M);*/
+		//
+		mxComplexDouble *pMc = mxGetComplexDoubles(M);
+		//
         // note that matlab expects the data in column-major order
         for (unsigned int i = 0; i < n; ++i)
         {
-            pMr[0*n+i] = double(rowind[i]+1); pMi[0*n+i] = double(0);
+            /*pMr[0*n+i] = double(rowind[i]+1); pMi[0*n+i] = double(0);
             pMr[1*n+i] = double(colind[i]+1); pMi[1*n+i] = double(0);
             pMr[2*n+i] = double(vals[i].real());
-            pMi[2*n+i] = double(vals[i].imag());
+            pMi[2*n+i] = double(vals[i].imag());*/
+			//
+			pMc[0 * n + i].real = double(rowind[i] + 1); pMc[0 * n + i].imag = double(0);
+			pMc[1 * n + i].real = double(colind[i] + 1); pMc[1 * n + i].imag = double(0);
+			pMc[2 * n + i].real = double(vals[i].real());
+			pMc[2 * n + i].imag = double(vals[i].imag());
+			//
         }
     }
     return M;
@@ -327,31 +376,69 @@ MatlabInterface::CopyFromRealMatrix(mxArray *M, unsigned int m, unsigned int n, 
 }
 
 
+//template <typename T>
+//int
+//MatlabInterface::CopyFromComplexMatrix(mxArray *M, unsigned int m, unsigned int n, std::complex<T> *dest, bool colmaj)
+//{
+//    assert(dest != NULL);
+//    if ( mxGetM(M) != m || mxGetN(M) != n ) {
+//        ERROR("CopyFromComplexMatrix: expected size " << m << "x" << n << ". Got " << mxGetM(M) << "x" << mxGetN(M) << ".");
+//        return 1;
+//    }
+//    assert(mxGetM(M) == m);
+//    assert(mxGetN(M) == n);
+//    double *pMr = mxGetPr(M);
+//    double *pMi = mxGetPi(M);
+//	
+//    bool pure_real = (pMi == NULL); // seems to be NULL when the matrix doesn't have complex values
+//
+//    // note that matlab expects the data in column-major order
+//    for (unsigned int j = 0; j < n; ++j)
+//        for (unsigned int i = 0; i < m; ++i)
+//        {
+//            unsigned int idxM = j*m+i;
+//            unsigned int idx = colmaj ? idxM : i*n+j;
+//			dest[idx] = std::complex<double>(T(pMr[idxM]), pure_real ? T(0) : T(pMi[idxM]));
+//        }
+//
+//    return 0;
+//}
+
 template <typename T>
 int
 MatlabInterface::CopyFromComplexMatrix(mxArray *M, unsigned int m, unsigned int n, std::complex<T> *dest, bool colmaj)
 {
-    assert(dest != NULL);
-    if ( mxGetM(M) != m || mxGetN(M) != n ) {
-        ERROR("CopyFromComplexMatrix: expected size " << m << "x" << n << ". Got " << mxGetM(M) << "x" << mxGetN(M) << ".");
-        return 1;
-    }
-    assert(mxGetM(M) == m);
-    assert(mxGetN(M) == n);
-    double *pMr = mxGetPr(M);
-    double *pMi = mxGetPi(M);
-    bool pure_real = (pMi == NULL); // seems to be NULL when the matrix doesn't have complex values
+	assert(dest != NULL);
+	if (mxGetM(M) != m || mxGetN(M) != n) {
+		ERROR("CopyFromComplexMatrix: expected size " << m << "x" << n << ". Got " << mxGetM(M) << "x" << mxGetN(M) << ".");
+		return 1;
+	}
+	assert(mxGetM(M) == m);
+	assert(mxGetN(M) == n);
+	
+	if (mxIsComplex(M)) {
+		mxComplexDouble *pMc = mxGetComplexDoubles(M);
+		// note that matlab expects the data in column-major order
+		for (unsigned int j = 0; j < n; ++j)
+			for (unsigned int i = 0; i < m; ++i)
+			{
+				unsigned int idxM = j*m + i;
+				unsigned int idx = colmaj ? idxM : i*n + j;
+				dest[idx] = std::complex<double>(T(pMc[idxM].real), T(pMc[idxM].imag));
+			}
+	}
+	else {
+		double *pM = mxGetDoubles(M);
+		for (unsigned int j = 0; j < n; ++j)
+			for (unsigned int i = 0; i < m; ++i)
+			{
+				unsigned int idxM = j*m + i;
+				unsigned int idx = colmaj ? idxM : i*n + j;
+				dest[idx] = std::complex<double>(T(pM[idxM]), T(0));
+			}
+	}
 
-    // note that matlab expects the data in column-major order
-    for (unsigned int j = 0; j < n; ++j)
-        for (unsigned int i = 0; i < m; ++i)
-        {
-            unsigned int idxM = j*m+i;
-            unsigned int idx = colmaj ? idxM : i*n+j;
-			dest[idx] = std::complex<double>(T(pMr[idxM]), pure_real ? T(0) : T(pMi[idxM]));
-        }
-
-    return 0;
+	return 0;
 }
 
 // Creates a matrix in the Matlab engine.
@@ -956,11 +1043,15 @@ int MatlabInterface::GetSparseComplexMatrix(const char* name, std::vector<unsign
 	int ncols =  mxGetN(M);
 	assert(ncols == 3); 
 
-	double *pMr = mxGetPr(M);
-	//double *pMi = mxGetPi(M);
-	double *pMi = mxGetComplexDoubles(M);
 	//
-	if(pMr == NULL || pMi == NULL) return -1;
+	/*double *pMr = mxGetPr(M);
+	double *pMi = mxGetPi(M);
+
+	if(pMr == NULL || pMi == NULL) return -1;*/
+	//
+	mxComplexDouble *pMc = mxGetComplexDoubles(M);
+	if (pMc == NULL) return -1;
+	//
 
 	rowind.resize(nentries);
 	colind.resize(nentries);
@@ -968,9 +1059,13 @@ int MatlabInterface::GetSparseComplexMatrix(const char* name, std::vector<unsign
 
 	for(unsigned int i = 0; i < nentries; ++i)
 	{
-		rowind[i] = (unsigned int)(pMr[           i]) - 1; assert(rowind[i] >= 0); 
+		/*rowind[i] = (unsigned int)(pMr[           i]) - 1; assert(rowind[i] >= 0); 
 		colind[i] = (unsigned int)(pMr[  nentries+i]) - 1; assert(colind[i] >= 0); 
-		vals  [i] = std::complex<double>(pMr[2*nentries+i], pMi[2*nentries+i]);
+		vals  [i] = std::complex<double>(pMr[2*nentries+i], pMi[2*nentries+i]);*/
+		//
+		rowind[i] = (unsigned int)(pMc[           i].real) - 1; assert(rowind[i] >= 0);
+		colind[i] = (unsigned int)(pMc[nentries + i].real) - 1; assert(colind[i] >= 0);
+		vals[i] = std::complex<double>(pMc[2 * nentries + i].real, pMc[2 * nentries + i].imag);
 	}
 	mxDestroyArray(M);
 
@@ -1030,13 +1125,15 @@ int MatlabInterface::GetEngineEncodedSparseComplexMatrix(const char* name, std::
 
 	mwIndex nzmax =  mxGetNzmax(M);
 
-	double *pMr = mxGetPr(M);
-	//double *pMi = mxGetPi(M);
-	double *pMi = mxGetComplexDoubles(M);
+	/*double *pMr = mxGetPr(M);
+	double *pMi = mxGetPi(M);*/
+	//
+	mxComplexDouble *pMc = mxGetComplexDoubles(M);
 	//
 	mwIndex *ir = mxGetIr(M);
 	mwIndex *jc = mxGetJc(M);
-	if(pMr == NULL || pMi == NULL || ir == NULL || jc == NULL) return -1;
+	//if(pMr == NULL || pMi == NULL || ir == NULL || jc == NULL) return -1;
+	if (pMc == NULL || ir == NULL || jc == NULL) return -1;
 
 	Ir.resize(nzmax);
 	Jc.resize(n + 1);
@@ -1044,7 +1141,8 @@ int MatlabInterface::GetEngineEncodedSparseComplexMatrix(const char* name, std::
 
 	for(int i = 0; i < nzmax; i++)
 	{
-		vals[i] = std::complex<double>(pMr[i], pMi[i]);
+		//vals[i] = std::complex<double>(pMr[i], pMi[i]);
+		vals[i] = std::complex<double>(pMc[i].real, pMc[i].imag);
 	}
 	memcpy(&Ir.front(), ir, Ir.size()*sizeof(Ir.front()));
 	memcpy(&Jc.front(), jc, Jc.size()*sizeof(Jc.front()));
