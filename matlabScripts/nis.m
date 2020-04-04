@@ -1,0 +1,2 @@
+welcome;
+uiwait(welcome);
